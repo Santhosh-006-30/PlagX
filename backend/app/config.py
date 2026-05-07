@@ -35,10 +35,6 @@ class Settings(BaseSettings):
     # ── Rate Limiting ─────────────────────────────────────────────────────────
     RATE_LIMIT_PER_MINUTE: int = 60
 
-    # ── Celery ───────────────────────────────────────────────────────────────
-    CELERY_BROKER_URL: str = "sqla+sqlite:///celery_broker.db"
-    CELERY_RESULT_BACKEND: str = "db+sqlite:///celery_results.db"
-
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

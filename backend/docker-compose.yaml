@@ -3,54 +3,28 @@ version: '3.8'
 services:
   db:
     image: postgres:15-alpine
-    container_name: plagx-db
-    restart: always
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     environment:
-      - POSTGRES_USER=plagx_user
-      - POSTGRES_PASSWORD=plagx_password
-      - POSTGRES_DB=plagx_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=plagx
     ports:
       - "5432:5432"
 
-  redis:
-    image: redis:7-alpine
-    container_name: plagx-redis
-    restart: always
-    ports:
-      - "6379:6379"
-
   api:
     build: .
-    container_name: plagx-api
     volumes:
       - .:/app
       - ./uploads:/app/uploads
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://plagx_user:plagx_password@db:5432/plagx_db
-      - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=enterprise_secret_key_change_me
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/plagx
+      - SECRET_KEY=your_secret_key_here
       - DEBUG=True
     depends_on:
       - db
-      - redis
-
-  worker:
-    build: .
-    container_name: plagx-worker
-    command: celery -A app.celery_worker worker --loglevel=info
-    volumes:
-      - .:/app
-      - ./uploads:/app/uploads
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://plagx_user:plagx_password@db:5432/plagx_db
-      - REDIS_URL=redis://redis:6379/0
-    depends_on:
-      - db
-      - redis
 
 volumes:
   postgres_data:

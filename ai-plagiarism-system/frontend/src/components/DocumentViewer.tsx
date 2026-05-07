@@ -76,9 +76,9 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ fileUrl, fileType, segm
   const renderHighlightedContent = () => {
     if (fileType === 'txt' || fileType === 'docx') {
       return (
-        <div className="whitespace-pre-wrap font-sans text-lg p-8 leading-relaxed text-zinc-800 dark:text-zinc-200">
+        <pre className="whitespace-pre-wrap font-sans text-lg p-8 leading-relaxed text-zinc-800 dark:text-zinc-200">
           {applyHighlightsToText(fullText, segments)}
-        </div>
+        </pre>
       );
     }
 
@@ -193,47 +193,54 @@ const PDFPage: React.FC<{ pageNum: number; fileUrl: string; segments: AISegment[
   );
 };
 
-const applyHighlightsToText = (text: string, segments: AISegment[]) => {
-  if (!text) return text;
-  if (!segments || segments.length === 0) return text;
+const getHighlightClass = (similarity: number) => {
+  if (similarity > 70) return 'highlight-plagiarism-high';
+  if (similarity > 40) return 'highlight-plagiarism-med';
+  return 'highlight-plagiarism-low';
+};
 
-  // Sort segments by start position
-  const sorted = [...segments].sort((a, b) => (a.start ?? a.start_index ?? 0) - (b.start ?? b.start_index ?? 0));
+const getAIHighlightClass = (score: number) => {
+  if (score > 80) return 'highlight-ai-high';
+  return 'highlight-ai-low';
+};
+
+const getHighlightAttributes = (seg: AISegment) => {
+  const simScore = seg.similarity_score || seg.similarity || 0;
+  const aiScore = seg.ai_score || 0;
+  const isPlagiarism = simScore > 20;
+  const isAI = aiScore > 20;
   
-  const elements: (string | JSX.Element)[] = [];
-  let cursor = 0;
-
-  sorted.forEach((seg, idx) => {
-    const start = seg.start ?? seg.start_index ?? 0;
-    const end = seg.end ?? seg.end_index ?? 0;
-
-    if (start < cursor) return; // Skip overlapping for simplicity in this view
-
-    if (start > cursor) {
-      elements.push(text.slice(cursor, start));
-    }
-
-    const type = seg.type || (seg.similarity_score && seg.similarity_score > 70 ? 'exact_plagiarism' : 'semantic_plagiarism');
-    const colorClass = `highlight-${type.replace('_', '-')}`;
-
-    elements.push(
-      <span
-        key={`hl-${idx}`}
-        className={`${colorClass} highlight-wrapped px-0.5 rounded-sm`}
-        title={seg.title || `${Math.round((seg.similarity_score || seg.ai_score || 0) * 100)}% Match`}
-        onClick={() => console.log("Match Clicked:", seg)}
-      >
-        {text.slice(start, end)}
-      </span>
-    );
-    cursor = end;
-  });
-
-  if (cursor < text.length) {
-    elements.push(text.slice(cursor));
+  // Debug
+  if (simScore > 0 || aiScore > 0) {
+    console.log('HIGHLIGHT CHECK:', { text: seg.text?.slice(0, 50), simScore, aiScore, isPlagiarism, isAI });
   }
 
-  return elements;
+  if (isPlagiarism) {
+    const className = getHighlightClass(simScore);
+    const sourceMarker = seg.source_index ? `[${seg.source_index}]` : '';
+    return {
+      class: className,
+      'data-source-index': sourceMarker,
+      title: `${Math.round(simScore)}% Similarity Match${seg.source_index ? ` (Source ${seg.source_index})` : ''}`
+    };
+  }
+  
+  if (isAI) {
+    return {
+      class: aiScore > 80 ? 'highlight-ai-high' : 'highlight-ai-low',
+      title: `AI Probability: ${Math.round(aiScore)}%`
+    };
+  }
+  
+  // If segment was marked as highlight by backend, still show it
+  if (seg.highlight) {
+    return {
+      class: 'highlight-ai-low',
+      title: `AI: ${Math.round(aiScore)}% | Sim: ${Math.round(simScore)}%`
+    };
+  }
+
+  return null;
 };
 
 const applyPDFHighlights = (container: HTMLElement, segments: AISegment[], pageNum: number) => {
@@ -241,11 +248,9 @@ const applyPDFHighlights = (container: HTMLElement, segments: AISegment[], pageN
   const textDivs = Array.from(container.querySelectorAll('span'));
 
   pageSegments.forEach(seg => {
-    const start = seg.start ?? seg.start_index ?? 0;
-    const end = seg.end ?? seg.end_index ?? 0;
-    
-    // PDF rendering logic relies on text content matching
-    // Keeping existing text matching for PDF layer to maintain visual alignment
+    const attrs = getHighlightAttributes(seg);
+    if (!attrs) return;
+
     const cleanSegText = seg.text.replace(/\s+/g, ' ').trim();
     if (cleanSegText.length < 5) return;
 
@@ -262,7 +267,11 @@ const applyPDFHighlights = (container: HTMLElement, segments: AISegment[], pageN
         
         if (currentMatch.trim().length >= cleanSegText.length * 0.8) {
           matchedDivs.forEach(m => {
-            m.classList.add('highlight-plagiarism-med');
+            m.classList.add(attrs.class);
+            if (attrs['data-source-index']) {
+              m.setAttribute('data-source-index', attrs['data-source-index']);
+            }
+            m.title = attrs.title;
           });
           currentMatch = '';
           matchedDivs = [];
@@ -273,6 +282,174 @@ const applyPDFHighlights = (container: HTMLElement, segments: AISegment[], pageN
       }
     }
   });
+};
+
+const applyHighlightsToText = (text: string, segments: AISegment[]) => {
+  if (!text) return text;
+  if (!segments || segments.length === 0) return text;
+
+  // ALL index calculations happen on the ORIGINAL text — never on a normalized copy.
+  const ranges: { start: number; end: number; attrs: any }[] = [];
+
+  segments.forEach((seg) => {
+    const attrs = getHighlightAttributes(seg);
+    if (!attrs) return;
+
+    const segText = seg.text || '';
+    if (segText.length < 3) return;
+
+    // --- Strategy 1: Use backend start/end indices directly ---
+    const bStart = seg.start ?? seg.start_index ?? -1;
+    const bEnd = seg.end ?? seg.end_index ?? -1;
+
+    if (bStart >= 0 && bEnd > bStart && bEnd <= text.length) {
+      const sliced = text.slice(bStart, bEnd);
+      // Quick sanity check: does the slice look like the segment text?
+      // Compare with whitespace collapsed, but the INDICES are from the original text.
+      if (sliced.replace(/\s+/g, ' ').trim() === segText.replace(/\s+/g, ' ').trim()) {
+        ranges.push({ start: bStart, end: bEnd, attrs });
+        console.log('HIGHLIGHT (indices):', bStart, '-', bEnd, segText.slice(0, 40));
+        return;
+      }
+    }
+
+    // --- Strategy 2: Find the segment's text in the ORIGINAL text via indexOf ---
+    // Try near the expected position first, then from the beginning.
+    const searchFrom = Math.max(0, bStart - 100);
+    let foundAt = text.indexOf(segText, searchFrom);
+    if (foundAt === -1 && searchFrom > 0) {
+      foundAt = text.indexOf(segText); // global fallback
+    }
+
+    if (foundAt >= 0) {
+      ranges.push({ start: foundAt, end: foundAt + segText.length, attrs });
+      console.log('HIGHLIGHT (indexOf):', foundAt, '-', foundAt + segText.length, segText.slice(0, 40));
+      return;
+    }
+
+    // --- Strategy 3: Fuzzy search — normalize for matching, then map back ---
+    // Collapse whitespace in both the segment and the original text for comparison only.
+    const segNorm = segText.replace(/\s+/g, ' ').trim();
+    if (segNorm.length < 3) return;
+
+    // Walk through the original text looking for a fuzzy match.
+    // We build a "normalized window" as we scan, tracking the original positions.
+    let winStart = -1;   // original-text index where current window starts
+    let winBuf = '';     // normalized content of the window
+    let i = 0;
+
+    while (i < text.length) {
+      const ch = text[i];
+      const isSpace = /\s/.test(ch);
+
+      if (winStart === -1) {
+        // Haven't started a window yet
+        if (!isSpace) {
+          winStart = i;
+          winBuf = ch;
+        }
+        i++;
+        continue;
+      }
+
+      // Append to window, collapsing whitespace
+      if (isSpace) {
+        if (!winBuf.endsWith(' ')) winBuf += ' ';
+      } else {
+        winBuf += ch;
+      }
+
+      // Check if the window ends with our target
+      if (winBuf.length >= segNorm.length) {
+        const tail = winBuf.slice(winBuf.length - segNorm.length);
+        if (tail.toLowerCase() === segNorm.toLowerCase()) {
+          // Match found! The end position in original text is i+1.
+          // Walk backwards to find the start in original text.
+          const matchEnd = i + 1;
+          // Count how many original chars contribute to segNorm.length normalized chars
+          let charsNeeded = segNorm.length;
+          let j = i;
+          let inSpace = false;
+          while (j >= 0 && charsNeeded > 0) {
+            const c = text[j];
+            if (/\s/.test(c)) {
+              if (!inSpace) { charsNeeded--; inSpace = true; }
+            } else {
+              charsNeeded--;
+              inSpace = false;
+            }
+            if (charsNeeded > 0) j--;
+          }
+          const matchStart = j;
+
+          if (matchStart >= 0) {
+            ranges.push({ start: matchStart, end: matchEnd, attrs });
+            console.log('HIGHLIGHT (fuzzy):', matchStart, '-', matchEnd, text.slice(matchStart, matchEnd).slice(0, 40));
+          }
+          // Move past this match to avoid duplicates
+          winStart = -1;
+          winBuf = '';
+          i++;
+          continue;
+        }
+      }
+
+      // Trim window if it's getting too long (2x target to limit scan cost)
+      if (winBuf.length > segNorm.length * 2) {
+        const trim = winBuf.length - segNorm.length * 2;
+        winBuf = winBuf.slice(trim);
+      }
+
+      i++;
+    }
+
+    // If none of the strategies worked
+    if (!ranges.some(r => r.attrs === attrs)) {
+      console.warn('HIGHLIGHT MISS:', segText.slice(0, 50));
+    }
+  });
+
+  // Sort by start position, merge overlaps
+  ranges.sort((a, b) => a.start - b.start);
+  const merged: typeof ranges = [];
+  for (const r of ranges) {
+    const last = merged[merged.length - 1];
+    if (last && r.start < last.end) {
+      last.end = Math.max(last.end, r.end); // extend
+    } else {
+      merged.push({ ...r });
+    }
+  }
+
+  // Build React elements by walking the ORIGINAL text
+  const elements: (string | JSX.Element)[] = [];
+  let cursor = 0;
+
+  merged.forEach((range, idx) => {
+    if (range.start > cursor) {
+      elements.push(text.slice(cursor, range.start));
+    }
+    elements.push(
+      <span
+        key={`hl-${idx}`}
+        className={`${range.attrs.class} highlight-wrapped`}
+        title={range.attrs.title}
+        data-source-index={range.attrs['data-source-index'] || ''}
+        data-debug-start={range.start}
+        data-debug-end={range.end}
+      >
+        {text.slice(range.start, range.end)}
+      </span>
+    );
+    cursor = range.end;
+  });
+
+  if (cursor < text.length) {
+    elements.push(text.slice(cursor));
+  }
+
+  console.log(`HIGHLIGHT SUMMARY: ${merged.length} regions rendered from ${segments.length} segments`);
+  return elements;
 };
 
 const injectHighlightsIntoHtml = (html: string, segments: AISegment[]) => {
