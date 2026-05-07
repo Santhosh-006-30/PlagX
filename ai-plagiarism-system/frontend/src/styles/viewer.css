@@ -1,0 +1,135 @@
+.ai-highlight {
+  background-color: rgba(255, 0, 0, 0.15);
+  border-bottom: 2px solid rgba(255, 0, 0, 0.4);
+  transition: all 0.2s ease;
+  cursor: help;
+  position: relative;
+}
+
+.ai-highlight:hover {
+  background-color: rgba(255, 0, 0, 0.25);
+  border-bottom-color: rgba(255, 0, 0, 0.8);
+}
+
+/* Plagiarism Highlights - Intensity Based */
+.highlight-plagiarism-high,
+.highlight-plagiarism-med,
+.highlight-plagiarism-low {
+  position: relative;
+  cursor: help;
+}
+
+.highlight-plagiarism-high::after,
+.highlight-plagiarism-med::after,
+.highlight-plagiarism-low::after {
+  content: attr(data-source-index);
+  position: absolute;
+  top: -8px;
+  right: -12px;
+  background: #3b82f6;
+  color: white;
+  font-size: 8px;
+  font-weight: 900;
+  padding: 1px 3px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.highlight-plagiarism-high {
+  background-color: rgba(255, 0, 0, 0.2);
+  border-bottom: 2px solid rgba(255, 0, 0, 0.6);
+}
+
+.highlight-plagiarism-med {
+  background-color: rgba(255, 120, 0, 0.18);
+  border-bottom: 2px solid rgba(255, 120, 0, 0.5);
+}
+
+.highlight-plagiarism-low {
+  background-color: rgba(255, 200, 0, 0.15);
+  border-bottom: 2px solid rgba(255, 200, 0, 0.4);
+}
+
+.highlight-ai-high {
+  background-color: rgba(168, 85, 247, 0.2);
+  border-bottom: 2px solid rgba(168, 85, 247, 0.5);
+}
+
+.highlight-ai-low {
+  background-color: rgba(168, 85, 247, 0.1);
+  border-bottom: 2px dashed rgba(168, 85, 247, 0.3);
+}
+
+/* Base wrapper for all highlights */
+.highlight-wrapped {
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  border-radius: 2px;
+  cursor: help;
+}
+
+.highlight-wrapped:hover {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+}
+
+/* Debug overlay: shows start/end on hover via data attributes */
+.highlight-wrapped[data-debug-start]:hover::after {
+  content: '[' attr(data-debug-start) '-' attr(data-debug-end) ']';
+  position: absolute;
+  bottom: -18px;
+  left: 0;
+  font-size: 9px;
+  background: #18181b;
+  color: #a1a1aa;
+  padding: 1px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.pdf-viewer-container {
+  position: relative;
+  width: 100%;
+  background: #f4f4f5;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  overflow-y: auto;
+  height: 800px;
+}
+
+.pdf-page-wrapper {
+  position: relative;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  background: white;
+}
+
+.pdf-overlay-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.pdf-highlight-box {
+  position: absolute;
+  background-color: rgba(255, 0, 0, 0.2);
+  border-bottom: 2px solid red;
+  pointer-events: auto;
+  z-index: 10;
+}
+
+.docx-viewer-content {
+  padding: 2rem;
+  line-height: 1.6;
+}
+
+.docx-viewer-content h1 { font-size: 2rem; font-weight: bold; margin-bottom: 1rem; }
+.docx-viewer-content h2 { font-size: 1.5rem; font-weight: bold; margin-bottom: 0.75rem; }
+.docx-viewer-content p { margin-bottom: 1rem; }
