@@ -11,55 +11,28 @@
   border-bottom-color: rgba(255, 0, 0, 0.8);
 }
 
-/* Plagiarism Highlights - Intensity Based */
-.highlight-plagiarism-high,
-.highlight-plagiarism-med,
-.highlight-plagiarism-low {
-  position: relative;
-  cursor: help;
+.highlight-exact-plagiarism {
+  background-color: rgba(239, 68, 68, 0.2);
+  border-bottom: 2px solid rgba(239, 68, 68, 0.6);
+  transition: all 0.2s ease;
 }
 
-.highlight-plagiarism-high::after,
-.highlight-plagiarism-med::after,
-.highlight-plagiarism-low::after {
-  content: attr(data-source-index);
-  position: absolute;
-  top: -8px;
-  right: -12px;
-  background: #3b82f6;
-  color: white;
-  font-size: 8px;
-  font-weight: 900;
-  padding: 1px 3px;
-  border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  z-index: 10;
-  pointer-events: none;
+.highlight-semantic-plagiarism {
+  background-color: rgba(249, 115, 22, 0.18);
+  border-bottom: 2px solid rgba(249, 115, 22, 0.5);
+  transition: all 0.2s ease;
 }
 
-.highlight-plagiarism-high {
-  background-color: rgba(255, 0, 0, 0.2);
-  border-bottom: 2px solid rgba(255, 0, 0, 0.6);
+.highlight-citation-overlap {
+  background-color: rgba(234, 179, 8, 0.15);
+  border-bottom: 2px solid rgba(234, 179, 8, 0.4);
+  transition: all 0.2s ease;
 }
 
-.highlight-plagiarism-med {
-  background-color: rgba(255, 120, 0, 0.18);
-  border-bottom: 2px solid rgba(255, 120, 0, 0.5);
-}
-
-.highlight-plagiarism-low {
-  background-color: rgba(255, 200, 0, 0.15);
-  border-bottom: 2px solid rgba(255, 200, 0, 0.4);
-}
-
-.highlight-ai-high {
+.highlight-ai-generated {
   background-color: rgba(168, 85, 247, 0.2);
   border-bottom: 2px solid rgba(168, 85, 247, 0.5);
-}
-
-.highlight-ai-low {
-  background-color: rgba(168, 85, 247, 0.1);
-  border-bottom: 2px dashed rgba(168, 85, 247, 0.3);
+  transition: all 0.2s ease;
 }
 
 /* Base wrapper for all highlights */

@@ -58,6 +58,50 @@ class ScanJob(Base):
     def __repr__(self) -> str:
         return f"<ScanJob id={self.id} status={self.status}>"
 
+class ScanMatch(Base):
+    __tablename__ = "scan_matches"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    scan_job_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("scan_jobs.id", ondelete="CASCADE"), nullable=False, index=True)
+    
+    query_start: Mapped[int] = mapped_column(nullable=False)
+    query_end: Mapped[int] = mapped_column(nullable=False)
+    
+    source_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    source_start: Mapped[int | None] = mapped_column(nullable=True)
+    source_end: Mapped[int | None] = mapped_column(nullable=True)
+    
+    match_type: Mapped[str] = mapped_column(String(50), nullable=False) # exact | semantic | citation
+    confidence: Mapped[float] = mapped_column(Float, default=0.0)
+    score: Mapped[float] = mapped_column(Float, default=0.0)
+    
+    # Relationships
+    scan_job: Mapped["ScanJob"] = relationship("ScanJob", backref="matches")
+
+class HighlightRegion(Base):
+    __tablename__ = "highlight_regions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    scan_job_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("scan_jobs.id", ondelete="CASCADE"), nullable=False, index=True)
+    
+    start: Mapped[int] = mapped_column(nullable=False)
+    end: Mapped[int] = mapped_column(nullable=False)
+    type: Mapped[str] = mapped_column(String(50), nullable=False)
+    color: Mapped[str] = mapped_column(String(20), nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, default=0.0)
+    source_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+class StylometryMetrics(Base):
+    __tablename__ = "stylometry_metrics"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    scan_job_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("scan_jobs.id", ondelete="CASCADE"), nullable=False, index=True, unique=True)
+    
+    sentence_length_variance: Mapped[float] = mapped_column(Float, default=0.0)
+    lexical_richness: Mapped[float] = mapped_column(Float, default=0.0)
+    punctuation_entropy: Mapped[float] = mapped_column(Float, default=0.0)
+    readability_score: Mapped[float] = mapped_column(Float, default=0.0)
+    ai_burstiness: Mapped[float] = mapped_column(Float, default=0.0)
 
 class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
