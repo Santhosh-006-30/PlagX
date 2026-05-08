@@ -29,9 +29,11 @@ PlagX is a comprehensive full-stack application designed to detect semantic plag
 ### 1. Backend Setup
 ```bash
 cd backend
-# Install dependencies (use the correct python path if needed)
+# Install dependencies
 pip install -r requirements.txt
-# Start the server
+# Start the server (Windows)
+.\start.bat
+# OR manually
 uvicorn app.main:app --reload --port 8000
 ```
 
