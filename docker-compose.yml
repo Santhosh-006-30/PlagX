@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: plagx_db
+    environment:
+      POSTGRES_USER: plagx_user
+      POSTGRES_PASSWORD: plagx_password
+      POSTGRES_DB: plagx_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: plagx_redis
+    ports:
+      - "6379:6379"
+
+  backend:
+    build: ./backend
+    container_name: plagx_backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./backend:/app
+      - ./uploads:/app/uploads
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://plagx_user:plagx_password@db:5432/plagx_db
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=development
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+
+  worker:
+    build: ./backend
+    container_name: plagx_worker
+    command: celery -A app.core.celery_app worker --loglevel=info
+    volumes:
+      - ./backend:/app
+      - ./uploads:/app/uploads
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://plagx_user:plagx_password@db:5432/plagx_db
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+
+volumes:
+  postgres_data:

@@ -74,17 +74,17 @@ class AIAuditService:
         """Samples the document for classification."""
         text_len = len(text)
         segments = []
-        if text_len <= 1500:
+        if text_len <= 1200:
             segments.append(text)
         else:
-            segments.append(text[:1500])
+            segments.append(text[:1200])
             mid = text_len // 2
-            segments.append(text[mid-750:mid+750])
-            segments.append(text[-1500:])
+            segments.append(text[mid-600:mid+600])
+            segments.append(text[-1200:])
         
         scores = []
         for segment in segments:
-            results = self.classifier(segment)
+            results = self.classifier(segment, truncation=True, max_length=512)
             ai_score = 0.0
             for res in results:
                 if res['label'] in ['ChatGPT', 'AI']:

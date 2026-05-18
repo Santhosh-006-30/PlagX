@@ -25,6 +25,7 @@ class Document(Base):
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     file_key: Mapped[str] = mapped_column(Text, nullable=False)   # storage path
     file_type: Mapped[str] = mapped_column(String(10), nullable=False)  # pdf|docx|txt
+    file_hash: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     file_size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
     word_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     extracted_text: Mapped[str | None] = mapped_column(Text, nullable=True)

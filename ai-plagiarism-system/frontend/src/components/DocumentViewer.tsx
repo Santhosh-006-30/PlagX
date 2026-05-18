@@ -13,25 +13,13 @@ if (typeof window !== 'undefined') {
 
 interface AISegment {
   text: string;
-  start_index?: number;
-  end_index?: number;
-  start?: number;
-  end?: number;
+  start_char: number;
+  end_char: number;
+  type: 'exact' | 'semantic' | 'ai' | 'citation';
+  confidence: number;
+  source_id?: string;
+  color: string;
   page?: number;
-  ai_score: number;
-  similarity?: number;
-  similarity_score?: number;
-  highlight?: boolean;
-  perplexity?: number;
-  entropy?: number;
-  match_type?: 'exact' | 'paraphrased';
-  source_index?: number;
-  source?: string;
-  category?: string;
-  classification?: string;
-  citation_credit?: number;
-  section?: string;
-  novelty_score?: number;
 }
 
 interface DocumentViewerProps {
@@ -39,9 +27,16 @@ interface DocumentViewerProps {
   fileType: string;
   segments: AISegment[];
   fullText: string;
+  onSegmentClick?: (segment: AISegment) => void;
 }
 
-const DocumentViewer: React.FC<DocumentViewerProps> = ({ fileUrl, fileType, segments, fullText }) => {
+const DocumentViewer: React.FC<DocumentViewerProps> = ({ 
+  fileUrl, 
+  fileType, 
+  segments, 
+  fullText,
+  onSegmentClick 
+}) => {
   const [docxHtml, setDocxHtml] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,8 +71,8 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ fileUrl, fileType, segm
   const renderHighlightedContent = () => {
     if (fileType === 'txt' || fileType === 'docx') {
       return (
-        <pre className="whitespace-pre-wrap font-sans text-lg p-8 leading-relaxed text-zinc-800 dark:text-zinc-200">
-          {applyHighlightsToText(fullText, segments)}
+        <pre className="whitespace-pre-wrap font-sans text-lg p-8 lg:p-12 leading-relaxed text-zinc-800 dark:text-zinc-200">
+          {applyHighlightsToText(fullText, segments, onSegmentClick)}
         </pre>
       );
     }
@@ -284,33 +279,24 @@ const applyPDFHighlights = (container: HTMLElement, segments: AISegment[], pageN
   });
 };
 
-const applyHighlightsToText = (text: string, segments: AISegment[]) => {
+const applyHighlightsToText = (
+  text: string, 
+  segments: AISegment[], 
+  onSegmentClick?: (segment: AISegment) => void
+) => {
   if (!text) return text;
   if (!segments || segments.length === 0) return text;
 
   // ALL index calculations happen on the ORIGINAL text — never on a normalized copy.
-  const ranges: { start: number; end: number; attrs: any }[] = [];
+  const ranges: { start: number; end: number; segment: AISegment }[] = [];
 
   segments.forEach((seg) => {
-    const attrs = getHighlightAttributes(seg);
-    if (!attrs) return;
-
-    const segText = seg.text || '';
-    if (segText.length < 3) return;
-
-    // --- Strategy 1: Use backend start/end indices directly ---
-    const bStart = seg.start ?? seg.start_index ?? -1;
-    const bEnd = seg.end ?? seg.end_index ?? -1;
+    const bStart = seg.start_char;
+    const bEnd = seg.end_char;
 
     if (bStart >= 0 && bEnd > bStart && bEnd <= text.length) {
-      const sliced = text.slice(bStart, bEnd);
-      // Quick sanity check: does the slice look like the segment text?
-      // Compare with whitespace collapsed, but the INDICES are from the original text.
-      if (sliced.replace(/\s+/g, ' ').trim() === segText.replace(/\s+/g, ' ').trim()) {
-        ranges.push({ start: bStart, end: bEnd, attrs });
-        console.log('HIGHLIGHT (indices):', bStart, '-', bEnd, segText.slice(0, 40));
-        return;
-      }
+      ranges.push({ start: bStart, end: bEnd, segment: seg });
+      return;
     }
 
     // --- Strategy 2: Find the segment's text in the ORIGINAL text via indexOf ---
@@ -432,11 +418,9 @@ const applyHighlightsToText = (text: string, segments: AISegment[]) => {
     elements.push(
       <span
         key={`hl-${idx}`}
-        className={`${range.attrs.class} highlight-wrapped`}
-        title={range.attrs.title}
-        data-source-index={range.attrs['data-source-index'] || ''}
-        data-debug-start={range.start}
-        data-debug-end={range.end}
+        className={`highlight-${range.segment.type} cursor-pointer transition-all hover:brightness-95`}
+        title={`${range.segment.type.toUpperCase()}: ${Math.round(range.segment.confidence * 100)}%`}
+        onClick={() => onSegmentClick?.(range.segment)}
       >
         {text.slice(range.start, range.end)}
       </span>

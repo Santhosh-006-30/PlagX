@@ -14,8 +14,10 @@ class Settings(BaseSettings):
 
     # ── Database ─────────────────────────────────────────────────────────────
     DATABASE_URL: str = "sqlite+aiosqlite:///./plagx.db"
-    DB_POOL_SIZE: int = 10
-    DB_MAX_OVERFLOW: int = 20
+    REDIS_URL: str = "redis://localhost:6379/0"
+    CELERY_TASK_ALWAYS_EAGER: bool = True # Run tasks locally without Redis
+    DB_POOL_SIZE: int = 20
+    DB_MAX_OVERFLOW: int = 10
     DB_POOL_TIMEOUT: int = 30
 
     # ── JWT ──────────────────────────────────────────────────────────────────
@@ -35,6 +37,12 @@ class Settings(BaseSettings):
     # ── Rate Limiting ─────────────────────────────────────────────────────────
     RATE_LIMIT_PER_MINUTE: int = 60
 
+    # ── Enterprise Detection ──────────────────────────────────────────────────
+    WINNOWING_WINDOW_SIZE: int = 4
+    WINNOWING_KGRAM_SIZE: int = 50
+    SEMANTIC_THRESHOLD: float = 0.85
+    AI_DETECTION_THRESHOLD: float = 0.70
+    
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
